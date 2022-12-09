@@ -12,6 +12,9 @@ public class Manager {
     int counter = 0;
 
     public void getAllTasks() {
+        tasksList.clear();
+        epicsList.clear();
+        subTasksList.clear();
         for (Task obj : taskHashMap.values()) {
             if (tasksList.contains(obj.name)) {
                 int index = tasksList.indexOf(obj.name);
@@ -63,22 +66,20 @@ public class Manager {
         }
         if (object.getClass() == Epic.class) {
             Epic obj = (Epic) object;
+            obj.status = "New";
             epicHashMap.put(obj.id, obj);
-            if (epicHashMap.get(obj.id).subTasksInEpic.size() == 0) {
-                epicHashMap.get(obj.id).status = "New";
-            }
         }
         if (object.getClass() == SubTask.class){
             SubTask obj = (SubTask) object;
             subTaskHashMap.put(obj.id, obj);
-            epicHashMap.get(obj.epicsId).subTasksInEpic.add(obj);
-
+            epicHashMap.get(obj.epicsId).subTasksInEpic.add(obj.id);
+                //Определяется статус Epic
             int score = 0;
-            for (SubTask exp : epicHashMap.get(obj.epicsId).subTasksInEpic) {
-                if (exp.status.equals("In progress")) {
+            for (int num : epicHashMap.get(obj.epicsId).subTasksInEpic) {
+                if (subTaskHashMap.get(num).status.equals("In progress")) {
                     epicHashMap.get(obj.epicsId).status = "In progress";
                     return;
-                } else if (exp.status.equals("New")) {
+                } else if (subTaskHashMap.get(num).status.equals("New")) {
                     score++;
                 }
                 }
@@ -95,92 +96,78 @@ public class Manager {
         }
     }
 
-
     public void update(Object object) {
-        if (object.getClass() == Task.class){
+        if (object.getClass() == Task.class) {
             Task obj = (Task) object;
             taskHashMap.put(obj.id, obj);
         }
-        if (object.getClass() == Epic.class){
+
+        if (object.getClass() == Epic.class) {
             Epic obj = (Epic) object;
-            ArrayList<SubTask> temporaryArray = epicHashMap.get(obj.id).subTasksInEpic;
+            //При обновлении Epic список его подзадач и статус сохраняются
+            ArrayList<Integer> temporaryArray = epicHashMap.get(obj.id).subTasksInEpic;
+            String temporaryStatus = epicHashMap.get(obj.id).status;
             epicHashMap.put(obj.id, obj);
             epicHashMap.get(obj.id).subTasksInEpic = temporaryArray;
-
-            int score = 0;
-            for (SubTask exp : epicHashMap.get(obj.id).subTasksInEpic) {
-                if (exp.status.equals("In progress")) {
-                    epicHashMap.get(obj.id).status = "In progress";
-                    return;
-                } else if (exp.status.equals("New")) {
-                    score++;
-                }
-            }
-            if (score == epicHashMap.get(obj.id).subTasksInEpic.size()) {
-                epicHashMap.get(obj.id).status = "New";
-                return;
-            } else if (score == 0) {
-                epicHashMap.get(obj.id).status = "Done";
-                return;
-            } else if (score > 0) {
-                epicHashMap.get(obj.id).status = "In progress";
-                return;
-            }
+            epicHashMap.get(obj.id).status = temporaryStatus;
         }
-        if (object.getClass() == SubTask.class){
-            SubTask obj = (SubTask) object;
-            subTaskHashMap.put(obj.id, obj);
-            ArrayList<SubTask> temporaryArray  = epicHashMap.get(obj.epicsId).subTasksInEpic;
-            for (SubTask exp : temporaryArray) {
-                if (obj.equals(exp)) {
-                    int index = temporaryArray.indexOf(exp);
-                    epicHashMap.get(obj.epicsId).subTasksInEpic.set(index, obj);
+
+            if (object.getClass() == SubTask.class) {
+                SubTask obj = (SubTask) object;
+                subTaskHashMap.put(obj.id, obj);
+
+                int score = 0;
+                for (int num : epicHashMap.get(obj.epicsId).subTasksInEpic) {
+                    if (subTaskHashMap.get(num).status.equals("In progress")) {
+                        epicHashMap.get(obj.epicsId).status = "In progress";
+                        return;
+                    } else if (subTaskHashMap.get(num).status.equals("New")) {
+                        score++;
+                    }
                 }
-            }
-            int score = 0;
-            for (SubTask exp : epicHashMap.get(obj.epicsId).subTasksInEpic) {
-                if (exp.status.equals("In progress")) {
+                if (score == epicHashMap.get(obj.epicsId).subTasksInEpic.size()) {
+                    epicHashMap.get(obj.epicsId).status = "New";
+                    return;
+                } else if (score == 0) {
+                    epicHashMap.get(obj.epicsId).status = "Done";
+                    return;
+                } else if (score > 0) {
                     epicHashMap.get(obj.epicsId).status = "In progress";
                     return;
-                } else if (exp.status.equals("New")) {
-                    score++;
                 }
             }
-            if (score == epicHashMap.get(obj.epicsId).subTasksInEpic.size()) {
-                epicHashMap.get(obj.epicsId).status = "New";
-                return;
-            } else if (score == 0) {
-                epicHashMap.get(obj.epicsId).status = "Done";
-                return;
-            } else if (score > 0) {
-                epicHashMap.get(obj.epicsId).status = "In progress";
-                return;
-            }
         }
-    }
-
 
     public void deleteById(int id) {
         if (taskHashMap.containsKey(id)) {
             taskHashMap.remove(id);
         } else if (epicHashMap.containsKey(id)) {
+            epicHashMap.get(id).subTasksInEpic.clear();
             epicHashMap.remove(id);
         } else if (subTaskHashMap.containsKey(id)) {
-            subTaskHashMap.remove(id);
-            for (Epic exp : epicHashMap.values()){
-                for (SubTask num : exp.subTasksInEpic) {
-                    if (num.id == id) {
+            //Подзадача удаляется из subTaskHashMap и из списка в epicHashMap
+                for (int num : epicHashMap.get(subTaskHashMap.get(id).epicsId).subTasksInEpic) {
+                    if (id == num) {
                         int index = 0;
-                        index = exp.subTasksInEpic.indexOf(num);
-                        exp.subTasksInEpic.remove(index);
+                        index = epicHashMap.get(subTaskHashMap.get(id).epicsId).subTasksInEpic.indexOf(num);
+                        epicHashMap.get(subTaskHashMap.get(id).epicsId).subTasksInEpic.remove(index);
+
+                        if (epicHashMap.get(subTaskHashMap.get(id).epicsId).subTasksInEpic.size() == 0) {
+                            epicHashMap.get(subTaskHashMap.get(id).epicsId).status = "New";
+                        }
+                        subTaskHashMap.remove(id);
+                        break;
                     }
                 }
             }
         }
-    }
 
     public ArrayList<SubTask> getEpicSubTasks(int id) {
-        ArrayList<SubTask> subTasks = epicHashMap.get(id).subTasksInEpic;
+        ArrayList<Integer> idsSubTasks = epicHashMap.get(id).subTasksInEpic;
+        ArrayList<SubTask> subTasks = new ArrayList<>();
+        for (int i : idsSubTasks) {
+            subTasks.add(subTaskHashMap.get(i));
+        }
         return subTasks;
     }
 
