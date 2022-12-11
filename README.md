@@ -14,7 +14,11 @@
 * Управлять статусами задач.
 
 Приложение написано на Java. Пример кода:
+
 ```java
+import manager.Manager;
+import task.Task;
+
 public class Main {
 
     public static void main(String[] args) {

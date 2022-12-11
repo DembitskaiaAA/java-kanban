@@ -1,5 +1,7 @@
-public class Main {
+import manager.Manager;
+import task.*;
 
+public class Main {
     public static void main(String[] args) {
         Manager manager = new Manager();
         Task task1 = new Task("Практикум", "Решить задачу", manager.countId(),
@@ -17,5 +19,7 @@ public class Main {
 
         Epic epic3 = new Epic("Аэропорт", "Встретить друга", manager.countId(), "");
 
+        SubTask subTask2_2 = new SubTask("Встретиться с риелтором", "Отдать ключи", 6,
+                "In progress", epic2.id);
     }
 }
