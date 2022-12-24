@@ -1,13 +1,15 @@
 package task;
+import manager.Status;
+
 import java.util.Objects;
 
 public class Task {
     public String name;
     public String description;
     public int id;
-    public String status;
+    public Status status;
 
-    public Task(String name, String description, int id, String status) {
+    public Task(String name, String description, int id, Status status) {
         this.name = name;
         this.description = description;
         this.id = id;
