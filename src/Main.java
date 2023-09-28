@@ -1,54 +1,116 @@
+import com.google.gson.Gson;
+import manager.InMemoryHistoryManager;
 import manager.InMemoryTaskManager;
 import manager.Manager;
-import manager.Status;
-import task.*;
+import server.HttpTaskManager;
+import server.HttpTaskServer;
+import server.KVServer;
+import task.Epic;
+import task.Status;
+import task.SubTask;
+import task.Task;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 public class Main {
+
     public static void main(String[] args) {
-        var manager = (InMemoryTaskManager) Manager.getDefault();
-        Task task1 = new Task("Практикум", "Решить задачу", manager.countId(),
-                Status.NEW);
+        HttpTaskManager manager;
+        KVServer kvServer;
+        HttpTaskServer server;
+        Gson gson;
+        try {
+            gson = Manager.getGson();
+            kvServer = new KVServer();
+            kvServer.start();
+            manager = (HttpTaskManager) Manager.getDefault();
+            server = new HttpTaskServer(manager);
 
-        Task epic1 = new Epic("День рождение", "Организовать др", manager.countId(), null);
-        Task subTask1 = new SubTask("Ресторан", "Посмотреть рестораны рядом", manager.countId(),
-                Status.IN_PROGRESS, epic1.id);
-        Task subTask1_1 = new SubTask("Гости", "Позвать гостей", manager.countId(), Status.NEW,
-                epic1.id);
+            Task task1 = new Task("Практикум", "Решить задачу", manager.countId(),
+                    Status.NEW, LocalDateTime.of(2023, 1, 1, 9, 0),
+                    Duration.ofMinutes(30));
+            Epic epic1 = new Epic("День рождение", "Организовать др", manager.countId(), null,
+                    null, null);
+            SubTask subTask1 = new SubTask("Ресторан", "Посмотреть рестораны рядом", manager.countId(),
+                    Status.NEW, epic1.id, LocalDateTime.of(2023, 1, 1, 10, 0),
+                    Duration.ofMinutes(30));
+            Task subTask1_1 = new SubTask("Гости", "Позвать гостей", manager.countId(), Status.NEW,
+                    epic1.id, LocalDateTime.of(2023, 1, 1, 11, 00),
+                    Duration.ofMinutes(30));
 
-        Task epic2 = new Epic("Квартира", "Продать квартиру", manager.countId(), null);
-        Task subTask2 = new SubTask("Встретиться с риелтором", "Отдать ключи", manager.countId(),
-                Status.NEW, epic2.id);
+            String json = gson.toJson(task1);
+            String json1 = gson.toJson(epic1);
+            String json2 = gson.toJson(subTask1);
+            String json3 = gson.toJson(subTask1_1);
 
-        Task epic3 = new Epic("Аэропорт", "Встретить друга", manager.countId(), null);
+            HttpClient client = HttpClient.newHttpClient();
+            //Создаю задачи
+            URI url = URI.create("http://localhost:8080/tasks/task");
+            URI url1 = URI.create("http://localhost:8080/tasks/epic");
+            URI url2 = URI.create("http://localhost:8080/tasks/subtask");
+            URI url3 = URI.create("http://localhost:8080/tasks/subtask");
 
-        Task subTask3 = new SubTask("Такси", "Заказать такси", manager.countId(),
-                Status.IN_PROGRESS, epic3.id);
+            final HttpRequest.BodyPublisher body = HttpRequest.BodyPublishers.ofString(json);
+            final HttpRequest.BodyPublisher body1 = HttpRequest.BodyPublishers.ofString(json1);
+            final HttpRequest.BodyPublisher body2 = HttpRequest.BodyPublishers.ofString(json2);
+            final HttpRequest.BodyPublisher body3 = HttpRequest.BodyPublishers.ofString(json3);
 
-        manager.create(task1);
+            HttpRequest request = HttpRequest.newBuilder().uri(url).POST(body).build();
+            HttpRequest request1 = HttpRequest.newBuilder().uri(url1).POST(body1).build();
+            HttpRequest request2 = HttpRequest.newBuilder().uri(url2).POST(body2).build();
+            HttpRequest request3 = HttpRequest.newBuilder().uri(url3).POST(body3).build();
 
-        manager.create(epic1);
-        manager.create(subTask1);
-        manager.create(subTask1_1);
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response1 = client.send(request1, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response2 = client.send(request2, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response3 = client.send(request3, HttpResponse.BodyHandlers.ofString());
 
-        manager.create(epic2);
-        manager.create(subTask2);
+            System.out.println(manager.getTasks());
+            System.out.println(manager.getEpics());
+            System.out.println(manager.getSubTasks());
 
-        manager.create(epic3);
-        manager.create(subTask3);
+            //Получаю задачи используя id для создания истории
+            URI urlHistory3 = URI.create("http://localhost:8080/tasks/task?id=3");
+            URI urlHistory1 = URI.create("http://localhost:8080/tasks/task?id=1");
+            URI urlHistory2 = URI.create("http://localhost:8080/tasks/task?id=2");
+            URI urlHistory4 = URI.create("http://localhost:8080/tasks/task?id=4");
 
-        manager.getTaskById(1);
-        manager.getTaskById(2);
-        manager.getTaskById(3);
-        manager.getTaskById(4);
-        manager.getTaskById(5);
-        manager.getTaskById(6);
-        manager.getTaskById(7);
-        manager.getTaskById(8);
-        manager.getTaskById(1);
-        manager.getTaskById(2);
+            HttpRequest requestHistory = HttpRequest.newBuilder().uri(urlHistory3).GET().build();
+            HttpRequest requestHistory1 = HttpRequest.newBuilder().uri(urlHistory1).GET().build();
+            HttpRequest requestHistory2 = HttpRequest.newBuilder().uri(urlHistory2).GET().build();
+            HttpRequest requestHistory3 = HttpRequest.newBuilder().uri(urlHistory4).GET().build();
 
-        manager.getTaskById(3);
+            HttpResponse<String> responseHistory = client.send(requestHistory, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> responseHistory1 = client.send(requestHistory1, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> responseHistory2 = client.send(requestHistory2, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> responseHistory3 = client.send(requestHistory3, HttpResponse.BodyHandlers.ofString());
 
-        System.out.println(manager.getHistory());
+            //Очищаю хэш-мапы и историю
+            InMemoryTaskManager.tasks.clear();
+            InMemoryTaskManager.epics.clear();
+            InMemoryTaskManager.subTasks.clear();
+            Manager.getDefaultHistory().removeAll();
+            server.stop();
+            //Проверяю, что задачи и история удалились
+            System.out.println(manager.getTasks());
+            System.out.println(manager.getEpics());
+            System.out.println(manager.getSubTasks());
+            System.out.println(manager.getHistory());
+            //Загружаю информацию с сервера
+            manager.loadFromServer();
+            System.out.println(manager.getTasks());
+            System.out.println(manager.getEpics());
+            System.out.println(manager.getSubTasks());
+            System.out.println(manager.getHistory());
+            kvServer.stop();
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
